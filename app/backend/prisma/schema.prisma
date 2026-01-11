@@ -1,0 +1,70 @@
+// Prisma schema for Fast Food Loyalty System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id           String     @id @default(cuid())
+  loyaltyId    String     @unique @map("loyalty_id")
+  name         String
+  email        String     @unique
+  phone        String
+  pinCode      String     @map("pin_code") // bcrypt hashed
+  points       Int        @default(0)
+  totalSpent   Float      @default(0) @map("total_spent")
+  visitCount   Int        @default(0) @map("visit_count")
+  role         Role       @default(NORMAL)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  
+  purchases    Purchase[]
+  coupons      Coupon[]
+
+  @@index([loyaltyId])
+  @@index([email])
+  @@map("customers")
+}
+
+model Purchase {
+  id            String   @id @default(cuid())
+  customerId    String   @map("customer_id")
+  amount        Float
+  pointsEarned  Int      @map("points_earned")
+  receiptNumber String   @unique @map("receipt_number")
+  timestamp     DateTime @default(now())
+  
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([timestamp])
+  @@map("purchases")
+}
+
+model Coupon {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  customerId String    @map("customer_id")
+  value      Int       @default(1000)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  redeemed   Boolean   @default(false)
+  redeemedAt DateTime? @map("redeemed_at")
+  
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([code])
+  @@index([redeemed])
+  @@map("coupons")
+}
+
+enum Role {
+  NORMAL
+  LOYAL
+  OWNER
+  ADMIN
+}
